@@ -30,14 +30,12 @@ class Display(QLabel):
         self.raw = None
         self.resize_paras = ResizeParas()
         self.mouseLDownCallback = None
-        self.mouseLMoveCallback = None
         self.mouseLUpCallback = None
         self.mouseRDownCallback = None
-        self.mouseRMoveCallback = None
         self.mouseRUpCallback = None
+        self.mouseMoveCallback = None
         self.mouseWheelCallback = None
         self.is_displaying = False
-        self.setMouseTracking(False)
 
         if mouseLDownCallback is not None:
             self.mouseLDownCallback = mouseLDownCallback
@@ -48,11 +46,12 @@ class Display(QLabel):
         if mouseRUpCallback is not None:
             self.mouseRUpCallback = mouseRUpCallback
         if mouseMoveCallback is not None:
-            self.mouseLMoveCallback = mouseMoveCallback
+            self.mouseMoveCallback = mouseMoveCallback
         if mouseWheelCallback is not None:
             self.mouseWheelCallback = mouseWheelCallback
 
     def display(self, img):
+        self.reset()
         self.is_displaying = True
         self.raw = img
         img = self.resize_image(img)
@@ -61,7 +60,16 @@ class Display(QLabel):
     def update_image(self, img):
         self.__update_image(img)
 
+    def set_constant_mouse_move_tracking(self, value):
+        if self.mouseMoveCallback is not None:
+            self.setMouseTracking(value)
+
+    def reset(self):
+        self.is_displaying = False
+
     def __update_image(self, img):
+        if img is None:
+            return
         self.img = img
         height, width, channel = self.img.shape
         # print("{}, {}, {}".format(height, width, channel))
@@ -74,7 +82,7 @@ class Display(QLabel):
     def mousePressEvent(self, event):
         x = event.x()
         y = event.y()
-        if x >= self.width or y >= self.height:
+        if not self.inside_img(x, y):
             return
         if event.button() == Qt.LeftButton:
             if self.mouseLDownCallback is not None:
@@ -86,7 +94,7 @@ class Display(QLabel):
     def mouseReleaseEvent(self, event):
         x = event.x()
         y = event.y()
-        if x >= self.width or y >= self.height:
+        if not self.inside_img(x, y):
             return
         if event.button() == Qt.LeftButton:
             if self.mouseLUpCallback is not None:
@@ -98,7 +106,7 @@ class Display(QLabel):
     def mouseMoveEvent(self, event):
         x = event.x()
         y = event.y()
-        if x >= self.width or y >= self.height:
+        if not self.inside_img(x, y):
             return
         if self.mouseMoveCallback is not None:
             self.mouseMoveCallback(x, y)
@@ -125,6 +133,8 @@ class Display(QLabel):
         new_ny = 0
         off_x = 0
         off_y = 0
+        if nx == 0 or ny == 0 or self.width == 0 or self.height == 0:
+            return
         if (nx / ny) > (self.width / self.height):
             new_nx = self.width
             new_ny = int(round(self.width * ny / nx))
@@ -145,4 +155,5 @@ class Display(QLabel):
             self.resize_paras.off_y = off_y
         return new_img
 
-
+    def inside_img(self, x, y):
+        return x >= self.resize_paras.off_x and y >= self.resize_paras.off_y and x < self.resize_paras.off_x + self.resize_paras.nx and y < self.resize_paras.off_y + self.resize_paras.ny
