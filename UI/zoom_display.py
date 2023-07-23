@@ -1,13 +1,14 @@
 import cv2
-from UI.display import Display
+from UI.display import Display, Transform
 from PyQt5.QtCore import Qt
 
 
 class Tile(object):
-    sx = 0
-    sy = 0
-    w = 0
-    h = 0
+    sx = 0  # start point for UI canvas
+    sy = 0  # start point for UI canvas
+    w = 0  # nx for UI canvas
+    h = 0  # ny for UI canvas
+    transform = Transform()
 
 
 class ZoomDisplay(Display):
@@ -33,11 +34,11 @@ class ZoomDisplay(Display):
         self.clean_img = None
         self.tileInfoCallback = tileInfoCallback
 
-    def display(self, img):
+    def display(self, img, rgb_swap=True):
         self.reset()
         self.is_displaying = True
         self.raw = img
-        img = self.resize_image(img)
+        img, self.transform.resize_paras = self.resize_image(img)
         self.update_image(img)
 
     def reset(self):
@@ -64,7 +65,7 @@ class ZoomDisplay(Display):
                 self.mouseLDownCallback(x, y)
         elif event.button() == Qt.RightButton:
             if self.enable_zoom and self.is_mag:
-                img = self.resize_image(self.raw, False)
+                img, self.transform.resize_paras = self.resize_image(self.raw)
                 self.update_image(img)
                 self.is_show = False
                 self.is_mag = False
@@ -93,8 +94,8 @@ class ZoomDisplay(Display):
                 self.update_image(self.clean_img)
                 self.show_crop_tile()
                 if self.tileInfoCallback is not None:
-                    img_x1, img_y1 = self.ui_xy_convert_to_img_xy(self.tile.sx, self.tile.sy)
-                    img_x2, img_y2 = self.ui_xy_convert_to_img_xy(self.tile.sx + self.tile.w, self.tile.sy + self.tile.h)
+                    img_x1, img_y1 = self.transform.convert_ui_to_image_xy(self.tile.sx, self.tile.sy)
+                    img_x2, img_y2 = self.transform.convert_ui_to_image_xy(self.tile.sx + self.tile.w, self.tile.sy + self.tile.h)
                     self.tileInfoCallback(img_x1, img_y1, abs(img_x2 - img_x1), abs(img_y2 - img_y1))
                 self.is_mag = True
             if self.mouseLUpCallback is not None:
@@ -111,13 +112,22 @@ class ZoomDisplay(Display):
 
     def show_crop_tile(self):
         if self.is_show and self.tile.w != 0 and self.tile.h != 0:
-            img_x1, img_y1 = self.ui_xy_convert_to_img_xy(self.tile.sx, self.tile.sy)
-            img_x2, img_y2 = self.ui_xy_convert_to_img_xy(self.tile.sx + self.tile.w, self.tile.sy + self.tile.h)
+            img_x1, img_y1 = self.transform.convert_ui_to_image_xy(self.tile.sx, self.tile.sy)
+            img_x2, img_y2 = self.transform.convert_ui_to_image_xy(self.tile.sx + self.tile.w, self.tile.sy + self.tile.h)
             crop = self.raw[min(img_y1, img_y2):max(img_y1, img_y2), min(img_x1, img_x2):max(img_x1, img_x2)]
-            crop = self.resize_image(crop, False)
+
+            crop, self.tile.transform.resize_paras = self.resize_image(crop)
+            self.tile.transform.raw_sx = img_x1
+            self.tile.transform.raw_sy = img_y1
+
             self.update_image(crop)
 
-    def ui_xy_convert_to_img_xy(self, x, y):
-        img_x = int(round((x - self.resize_paras.off_x) * self.resize_paras.raw_nx / self.resize_paras.nx))
-        img_y = int(round((y - self.resize_paras.off_y) * self.resize_paras.raw_ny / self.resize_paras.ny))
-        return img_x, img_y
+    def inside_img(self, x, y):
+        if self.is_mag:
+            if not self.tile.transform.inside_img(x, y):
+                return False
+        else:
+            if not self.transform.inside_img(x, y):
+                return False
+        return True
+

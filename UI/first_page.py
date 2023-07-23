@@ -21,29 +21,32 @@ class FirstPage(QWidget):
         layout = QGridLayout(self)
         self.label = QLabel("First Page")
         layout.addWidget(self.label, 0, 0, 1, 1)
-        layout.addWidget(self.display, 1, 0, 20, 4)
+        layout.addWidget(self.display, 1, 0, 20, 20)
 
         self.open_image_button = QPushButton('Open Image', self)
         self.open_image_button.clicked.connect(self.open_image)
-        layout.addWidget(self.open_image_button, 1, 4, 1, 1)
+        layout.addWidget(self.open_image_button, 1, 19, 1, 1)
 
         self.coordinate_label = QLabel("Mouse Tracking coordinate: (0, 0)", self)
-        layout.addWidget(self.coordinate_label, 2, 4, 1, 1)
+        layout.addWidget(self.coordinate_label, 2, 19, 1, 1)
 
         self.down_coordinate_label = QLabel("Mouse Down coordinate: (0, 0)", self)
-        layout.addWidget(self.down_coordinate_label, 3, 4, 1, 1)
+        layout.addWidget(self.down_coordinate_label, 3, 19, 1, 1)
 
         self.up_coordinate_label = QLabel("Mouse Up coordinate: (0, 0)", self)
-        layout.addWidget(self.up_coordinate_label, 4, 4, 1, 1)
+        layout.addWidget(self.up_coordinate_label, 4, 19, 1, 1)
 
         self.tile_label = QLabel("Box info sx, sy, w, h: (0, 0, 0, 0)", self)
-        layout.addWidget(self.tile_label, 5, 4, 1, 1)
+        layout.addWidget(self.tile_label, 5, 19, 1, 1)
 
     def open_image(self):
         filename, _ = QFileDialog.getOpenFileName(self, 'Open Image', 'Image', '*.png *.jpg *.bmp')
         if filename is '':
             return
         self.img = cv2.imread(filename, -1)
+        if self.img is None:
+            print("Cannot open {}".format(filename))
+            return
         self.display.display(self.img)
         self.display.set_enable_zoom(True)
 
